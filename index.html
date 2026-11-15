@@ -59,6 +59,17 @@
      sizes — so the layout scales uniformly instead of drifting per-viewport. */
   .hero{position:relative;min-height:100svh;overflow:hidden;background:#fff;isolation:isolate;
     container-type:inline-size}
+  /* Composition stage: holds every designed element (header chrome included).
+     At or narrower than 16:9 it fills the hero, so cqw = hero width — exactly
+     the behaviour the composition was calibrated with. Wider than 16:9 it
+     fits the hero HEIGHT instead (width = height x 16/9, centred), so the
+     fixed composition is never clipped at the bottom; the mist wash stays a
+     direct child of .hero (hero cqw) and remains full-bleed behind it. */
+  .hero-stage{position:absolute;inset:0;z-index:1;container-type:inline-size}
+  @media (min-width:761px) and (min-aspect-ratio:16/9){
+    .hero-stage{left:50%;right:auto;top:0;bottom:auto;width:auto;height:100%;
+      aspect-ratio:16/9;transform:translateX(-50%)}
+  }
   .mist{position:absolute;border-radius:50%;pointer-events:none;z-index:0;
     background:radial-gradient(closest-side, rgba(246,74,45,.34), rgba(246,74,45,0) 72%);
     filter:blur(46px)}
@@ -167,35 +178,76 @@
     font-size:13px;letter-spacing:.18em;color:rgba(255,255,255,.5)}
 
   /* ---------- stay ahead ---------- */
-  .stay{position:relative;overflow:hidden;padding:clamp(90px,15vh,170px) 0 clamp(80px,12vh,140px);
-    background:linear-gradient(180deg,#fff 0%,#FBEDEA 26%,#F8E3DF 60%,#FDF4F2 100%)}
-  .stay-type{position:relative;z-index:1;margin-left:clamp(18px,4.5vw,86px);
-    font-family:var(--font-d);line-height:.84;font-size:clamp(90px,17.5vw,336px);letter-spacing:.005em}
-  .stay-type span{display:block;transform:scaleY(1.18);transform-origin:0 0;
+  /* One fixed 1920x1080 composition, same discipline as the hero: .stay is a
+     single 100vh scene and .stay-stage holds the design in cqw (1cqw = 1% of
+     stage width = 19.2 composition px at 1920). Wider than 16:9 the stage
+     fits the scene HEIGHT and centres, so the composition never clips; the
+     pink field stays on .stay itself, full-bleed behind the stage. (No px
+     min-height floor: at the user's 627px-tall window a floor would push
+     the scene past one viewport — the composition scales instead.) */
+  .stay{position:relative;height:100vh;height:100svh;overflow:hidden;isolation:isolate;
+    container-type:inline-size;
+    background:radial-gradient(130% 105% at 50% 40%, #F9E8E4 0%, #F6DCD7 58%, #F4D7D1 100%)}
+  .stay-stage{position:absolute;inset:0;container-type:inline-size}
+  @media (min-width:761px) and (min-aspect-ratio:16/9){
+    .stay-stage{left:50%;right:auto;top:0;bottom:auto;width:auto;height:100%;
+      aspect-ratio:16/9;transform:translateX(-50%)}
+  }
+  /* type: two lines on the shared left axis x=7.9%. STAY shouts red, AHEAD is
+     the dark ground. No scaleY, no overlap — the card floats in the gap. */
+  /* Size note: the spec's 336px was its estimate of the reference's type.
+     Measured in Anton (narrower advances than the reference's Thunder), the
+     spec's own geometry — AHEAD's ink meeting the kiss axis at 55%, STAY's
+     ink ending at ~42% — needs 20.13cqw (386px at 1920); tops are placed so
+     the INK tops land on the spec's 9.6% / 51.6%, and AHEAD carries a touch
+     of tracking (0.02em) to close the last of the width gap. */
+  .stay-line{position:absolute;z-index:1;left:7.92cqw;font-family:var(--font-d);font-weight:400;
+    font-size:20.13cqw;line-height:1;letter-spacing:.005em;white-space:nowrap}
+  .stay-stay{top:4.25cqw;
     background:linear-gradient(180deg,#FF4A2D 0%,#E81E06 55%,#8A1004 100%);
     -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
-  .stay-robot{position:absolute;z-index:2;right:-5%;top:6%;width:clamp(320px,33vw,640px);
-    transform:scaleX(-1);pointer-events:none;
-    -webkit-mask-image:linear-gradient(180deg,#000 55%,transparent 95%);
-            mask-image:linear-gradient(180deg,#000 55%,transparent 95%)}
-  .stay-card{position:relative;z-index:3;width:min(580px,88vw);margin:clamp(-70px,-4vw,-30px) auto 0;
-    transform:translateX(clamp(-160px,-9vw,0px));
-    background:rgba(255,255,255,.52);border:1px solid rgba(255,255,255,.75);border-radius:28px;
-    padding:clamp(30px,3.4vw,50px);
-    backdrop-filter:blur(20px) saturate(1.3);-webkit-backdrop-filter:blur(20px) saturate(1.3);
+  .stay-ahead{top:27.66cqw;letter-spacing:.002em;
+    background:linear-gradient(180deg,#6B1A0E 0%,#1A0B09 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+  /* rear-view robot: fully contained, native aspect — ONE dimension is set
+     (width); height stays auto and object-fit is only a guard. Deliberate
+     cropping happens via the base mask fade, never by squeezing the box. */
+  .stay-robot{position:absolute;z-index:2;left:55.1cqw;top:.42cqw;width:39.38cqw;height:auto;
+    object-fit:contain;pointer-events:none;
+    -webkit-mask-image:linear-gradient(180deg,#000 62%,transparent 96%);
+            mask-image:linear-gradient(180deg,#000 62%,transparent 96%)}
+  /* card: 44% of frame on the centre axis x=36.9%, in front of the robot —
+     its right edge crosses the kiss axis (55%) and overlaps the robot's
+     left edge by ~62px. All content centre-aligned on the same axis. */
+  .stay-card{position:absolute;z-index:3;left:14.06cqw;top:15.21cqw;width:44.27cqw;height:26.98cqw;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    background:rgba(255,255,255,.38);border:1px solid rgba(255,255,255,.8);border-radius:1.458cqw;
+    padding:2.917cqw 3.333cqw;
+    backdrop-filter:blur(18px) saturate(1.25);-webkit-backdrop-filter:blur(18px) saturate(1.25);
     box-shadow:0 40px 80px -40px rgba(122,13,3,.35)}
-  .stay-card .eyebrow{display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:600;
-    letter-spacing:.24em;color:#5c4a46;margin-bottom:20px}
-  .stay-card .eyebrow::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--red)}
-  .stay-card h2{font-family:var(--font-d);font-weight:400;font-size:clamp(34px,3.1vw,58px);
-    line-height:1.04;letter-spacing:.01em;margin-bottom:16px}
-  .stay-card p{font-size:clamp(15px,1.05vw,19px);color:#5c4a46;margin-bottom:28px}
-  .btn-dark{display:inline-flex;align-items:center;gap:10px;background:#0D0C0F;color:#fff;
-    border-radius:999px;padding:.95em 1.9em;font-size:14px;font-weight:600;letter-spacing:.13em;
-    transition:background .3s,transform .3s}
-  .btn-dark:hover{background:var(--red);transform:translateY(-2px)}
-  .mini-row{position:relative;z-index:3;display:grid;grid-template-columns:repeat(3,1fr);
-    gap:clamp(14px,1.6vw,26px);max-width:1180px;margin:clamp(40px,6vh,64px) auto 0;
+  .stay-card .eyebrow{display:flex;align-items:center;justify-content:center;gap:.47cqw;
+    font-size:.677cqw;font-weight:600;letter-spacing:.24em;color:#5c4a46;margin-bottom:1.354cqw}
+  .stay-card .eyebrow::before{content:"";width:.417cqw;height:.417cqw;border-radius:50%;background:var(--red);flex:none}
+  /* 4.22cqw (81px at 1920), not the spec's 84: measured, "MAKE YOUR NEXT
+     MOVE" is 742px wide in Anton at 84px and the card's content box is
+     722px — at 84 it wraps to 3 lines. 81px keeps the spec's exact
+     two-line structure. */
+  .stay-card h2{font-family:var(--font-d);font-weight:400;font-size:4.22cqw;line-height:1.02;
+    letter-spacing:.01em;color:#14090B;margin-bottom:1.042cqw}
+  .stay-card p{font-size:.9375cqw;color:#5c4a46;margin-bottom:1.771cqw}
+  .btn-red{display:inline-flex;align-items:center;gap:.52cqw;color:#fff;border-radius:999px;
+    background:linear-gradient(180deg,#FF4A2D,#E81E06);
+    padding:.833cqw 1.771cqw;font-size:.729cqw;font-weight:600;letter-spacing:.13em;
+    box-shadow:0 0 0 .3125cqw rgba(255,255,255,.55), 0 18px 34px -16px rgba(232,30,6,.55);
+    transition:transform .3s,box-shadow .3s}
+  .btn-red:hover{transform:translateY(-2px);
+    box-shadow:0 0 0 .3125cqw rgba(255,255,255,.55), 0 24px 42px -16px rgba(232,30,6,.65)}
+
+  /* ---------- features (the mini cards live here now, not inside .stay) ---------- */
+  .features{position:relative;padding:clamp(64px,10vh,104px) 0 clamp(72px,11vh,110px);
+    background:linear-gradient(180deg,#F8E7E2 0%,#FDF4F2 88%)}
+  .mini-row{position:relative;display:grid;grid-template-columns:repeat(3,1fr);
+    gap:clamp(14px,1.6vw,26px);max-width:1180px;margin:0 auto;
     padding:0 clamp(20px,4vw,60px)}
   .mini-card{background:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.7);border-radius:22px;
     padding:26px 26px 24px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
@@ -317,9 +369,21 @@
       background:#fff;color:var(--ink);border-radius:999px;padding:.95em 2.2em;
       font-size:3.846cqw;font-weight:600;letter-spacing:.14em;white-space:nowrap;
       box-shadow:0 18px 40px -14px rgba(20,9,10,.30)}
+    /* stay ahead, phone: composed separately — type on the left axis, card
+       full width overlapping AHEAD's lower third, robot omitted */
+    .stay{height:auto;min-height:100svh;padding:72px 20px 80px}
+    .stay-stage{position:relative;inset:auto}
+    .stay-line{position:static;font-size:24.1vw}
+    .stay-ahead{margin-top:10px}
     .stay-robot{display:none}
-    .stay-card{transform:none;margin-top:clamp(-46px,-8vw,-20px)}
-    .stay-type{font-size:24vw}
+    .stay-card{position:relative;left:auto;top:auto;width:100%;height:auto;
+      margin-top:-30px;padding:40px 26px 44px;border-radius:24px}
+    .stay-card .eyebrow{font-size:11px;letter-spacing:.18em;gap:8px;margin-bottom:18px} /* 11px/.18em keeps the eyebrow on ONE line at 350px wide — at 12px/.24em it wrapped and orphaned the dot */
+    .stay-card .eyebrow::before{width:8px;height:8px}
+    .stay-card h2{font-size:33px;margin-bottom:14px} /* spec says 40px, but at 40 the headline line is 353px in a 298px box and wraps to 3 lines — 33px keeps the two-line structure */
+    .stay-card p{font-size:15.5px;margin-bottom:26px}
+    .btn-red{font-size:13.5px;padding:15px 30px;gap:8px;
+      box-shadow:0 0 0 5px rgba(255,255,255,.55), 0 18px 34px -16px rgba(232,30,6,.55)}
     .mini-row{grid-template-columns:1fr}
     .tiers{grid-template-columns:1fr}
     .f-grid{grid-template-columns:1fr}
@@ -342,6 +406,7 @@
   <div class="mist mist-tl"></div>
   <div class="mist mist-bl"></div>
   <div class="mist mist-br"></div>
+ <div class="hero-stage">
   <div class="glow-robot"></div>
 
   <div class="site-head">
@@ -393,6 +458,7 @@
     <span>AI CYBER</span><span>SECURITY</span><span>PLATFORM</span>
   </div>
   <a class="phone-cta" href="#pricing">GET STARTED</a>
+ </div>
 </header>
 
 <!-- menu overlay -->
@@ -410,14 +476,24 @@
 <main>
   <!-- ================= STAY AHEAD ================= -->
   <section class="stay" id="solutions" aria-label="Stay ahead">
-    <div class="stay-type" aria-hidden="true"><span>STAY</span><span>AHEAD</span></div>
-    <img class="stay-robot" src="assets/robot.webp" alt="" aria-hidden="true" width="900" height="900" loading="lazy">
+   <div class="stay-stage">
+    <div class="stay-line stay-stay" aria-hidden="true">STAY</div>
+    <div class="stay-line stay-ahead" aria-hidden="true">AHEAD</div>
+    <img class="stay-robot" src="assets/robot-rear.webp"
+         srcset="assets/robot-rear-540.webp 540w, assets/robot-rear.webp 900w"
+         sizes="(max-width: 760px) 1px, 39.4vw"
+         alt="" aria-hidden="true" loading="lazy">
     <div class="stay-card" data-reveal>
-      <div class="eyebrow">YOUR NEXT MOVE, A SAFER FUTURE</div>
-      <h2>MAKE YOUR NEXT MOVE A SAFER ONE</h2>
+      <div class="eyebrow">YOUR NEXT MOVE. A SAFER FUTURE.</div>
+      <h2>MAKE YOUR NEXT MOVE<br>A SAFER ONE</h2>
       <p>Spend less on security operations.</p>
-      <a class="btn-dark" href="#pricing">GET PROTECTED <span aria-hidden="true">↗</span></a>
+      <a class="btn-red" href="#pricing">GET PROTECTED <span aria-hidden="true">→</span></a>
     </div>
+   </div>
+  </section>
+
+  <!-- ================= FEATURES ================= -->
+  <section class="features" aria-label="Features">
     <div class="mini-row" id="features">
       <article class="mini-card" data-reveal>
         <h3>REAL-TIME RESPONSE</h3>
@@ -691,8 +767,12 @@
         scrollTrigger: { trigger: el, start: 'top 86%', once: true }
       });
     });
-    gsap.fromTo('.stay-type span', { yPercent: 18 }, { yPercent: 0, ease: 'none', stagger: 0.1,
+    gsap.fromTo('.stay-line', { yPercent: 18 }, { yPercent: 0, ease: 'none', stagger: 0.1,
       scrollTrigger: { trigger: '.stay', start: 'top bottom', end: 'top 30%', scrub: true } });
+    /* robot drifts a touch against the scroll — translation only, never a
+       scale, so the rendered box keeps the asset's native aspect */
+    gsap.fromTo('.stay-robot', { y: -16 }, { y: 16, ease: 'none',
+      scrollTrigger: { trigger: '.stay', start: 'top bottom', end: 'bottom top', scrub: true } });
   }
 
   /* ---------- custom cursor (hero, fine pointers) ---------- */
